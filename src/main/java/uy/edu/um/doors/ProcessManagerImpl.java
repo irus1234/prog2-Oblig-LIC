@@ -122,6 +122,68 @@ public class ProcessManagerImpl implements ProcessManager{
     // PREPARE
     // -------------------------------------------------------------------------
 
+    @Override
+    public void prepareProcesses() {
+        if (nuevosProcesos.isEmpty()) {
+            System.out.println("No hay procesos nuevos para preparar.");
+            return;
+        }
+        while (!nuevosProcesos.isEmpty()) {
+            Process p;
+            try {
+                p = nuevosProcesos.dequeue();
+            } catch (EmptyQueueException e) {
+                break;
+            }
+            p.calculatePriority();
+            p.setState(ProcessState.PENDING);
+            procesosPendientes.insert(p);
+            log("NEW PENDING PROCESS: PID=" + p.getPid() + " | " + p.getName()
+                    + " | USER:" + p.getUser().getAlias() + " UID:" + p.getUser().getUid()
+                    + " | P=" + p.getPriority());
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // EXECUTE
+    // -------------------------------------------------------------------------
+
+    @Override
+    public void executeNextProcess() {
+        if (procesoEjecutando != null) {
+            System.out.println("ERROR: Ya hay un proceso en ejecución (PID=" + procesoEjecutando.getPid() + "). Finalícelo antes de ejecutar otro.");
+            return;
+        }
+        if (procesosPendientes.isEmpty()) {
+            System.out.println("ERROR: No hay procesos pendientes para ejecutar.");
+            return;
+        }
+        Process p;
+        try {
+            p = procesosPendientes.remove();
+        } catch (EmptyHeapException e) {
+            System.out.println("ERROR: No se pudo obtener el siguiente proceso.");
+            return;
+        }
+        p.setState(ProcessState.RUNNING);
+        procesoEjecutando = p;
+
+        // Loguear EXECUTING PROCESS
+        StringBuilder sb = new StringBuilder();
+        sb.append("EXECUTING PROCESS: PID=").append(p.getPid())
+                .append(" | USER:").append(p.getUser().getAlias())
+                .append(" UID:").append(p.getUser().getUid());
+        log(sb.toString());
+
+        // Loguear cada evento
+        Node<Event> nodo = p.getEvents().getFirst();
+        while (nodo != null) {
+            Event ev = nodo.getValue();
+            logRaw(" EVENT: " + ev.getType() + " | Instructions " + ev.getInstructionsString());
+            nodo = nodo.getNext();
+        }
+    }
+
     
     @Override
     public void finishProcessOk() {
