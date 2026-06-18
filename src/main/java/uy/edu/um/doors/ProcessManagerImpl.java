@@ -230,42 +230,28 @@ public class ProcessManagerImpl implements ProcessManager{
     // EXECUTE
     // -------------------------------------------------------------------------
 
-    @Override
+   @Override
     public void executeNextProcess() {
         if (procesoEjecutando != null) {
-            System.out.println("ERROR: Ya hay un proceso en ejecución (PID=" + procesoEjecutando.getPid() + "). Finalícelo antes de ejecutar otro.");
+            System.out.println("ERROR: Ya hay un proceso en ejecución (PID="
+                    + procesoEjecutando.getPid() + "). Finalícelo antes de ejecutar otro.");
             return;
         }
-        if (procesosPendientes.isEmpty()) {
+
+        if (procesosPending.isEmpty()) {
             System.out.println("ERROR: No hay procesos pendientes para ejecutar.");
             return;
         }
-        Process p;
+
         try {
-            p = procesosPendientes.remove();
+            Proceso proceso = procesosPending.remove();
+            proceso.setEstado(EstadoProceso.RUNNING);
+            procesoEjecutando = proceso;
+            logManager.logExecutingProcess(proceso);
         } catch (EmptyHeapException e) {
             System.out.println("ERROR: No se pudo obtener el siguiente proceso.");
-            return;
-        }
-        p.setState(ProcessState.RUNNING);
-        procesoEjecutando = p;
-
-        // Loguear EXECUTING PROCESS
-        StringBuilder sb = new StringBuilder();
-        sb.append("EXECUTING PROCESS: PID=").append(p.getPid())
-                .append(" | USER:").append(p.getUser().getAlias())
-                .append(" UID:").append(p.getUser().getUid());
-        log(sb.toString());
-
-        // Loguear cada evento
-        Node<Event> nodo = p.getEvents().getFirst();
-        while (nodo != null) {
-            Event ev = nodo.getValue();
-            logRaw(" EVENT: " + ev.getType() + " | Instructions " + ev.getInstructionsString());
-            nodo = nodo.getNext();
         }
     }
-
     
     @Override
     public void finishProcessOk() {
