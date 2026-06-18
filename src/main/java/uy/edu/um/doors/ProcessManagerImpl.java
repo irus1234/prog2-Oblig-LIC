@@ -1,9 +1,50 @@
 package uy.edu.um.doors;
+//Imports
+import uy.edu.um.clases.*;
+import uy.edu.um.tad.hash.MyHash;
+import uy.edu.um.tad.hash.MyHashImpl;
+import uy.edu.um.tad.heap.EmptyHeapException;
+import uy.edu.um.tad.heap.MyHeap;
+import uy.edu.um.tad.heap.MyHeapImpl;
+import uy.edu.um.tad.list.MyLinkedListImpl;
+import uy.edu.um.tad.list.MyList;
+import uy.edu.um.tad.list.Node;
+import uy.edu.um.tad.queue.EmptyQueueException;
+import uy.edu.um.tad.queue.MyQueue;
+import uy.edu.um.tad.queue.MyQueueImpl;
+import uy.edu.um.tad.stack.EmptyStackException;
+import uy.edu.um.tad.stack.MyStack;
+import uy.edu.um.tad.stack.MyStackImpl;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 
 public class ProcessManagerImpl implements ProcessManager{
 
-    //EL DISEÑO DE LA ESTRUCTURA DE ALMACENAMIENTO DEBE IMPLEMENTARSE EN ESTA CLASE EN RELACIÓN CON LAS ENTIDADES QUE DEFINA
+   //EEstructuras de datos
+    private MyHash<Integer, Usuario> usuariosPorUid;
+    private MyHash<Integer, Proceso> procesosPorPid;
+    private MyQueue<Proceso> procesosNew;
+    private MyHeap<Proceso> procesosPending;
+    private MyStack<Proceso> procesosFinished;
+    private MyList<Proceso> procesosEnMemoria;
+    private Proceso procesoEjecutando;
+    private LogManager logManager;
 
+    //Constructor
+    public ProcessManagerImpl() {
+        this.usuariosPorUid = new MyHashImpl<>();
+        this.procesosPorPid = new MyHashImpl<>();
+        this.procesosNew = new MyQueueImpl<>();
+        // false = heap máximo, para ejecutar primero el proceso de mayor prioridad
+        this.procesosPending = new MyHeapImpl<>(false);
+        this.procesosFinished = new MyStackImpl<>();
+        this.procesosEnMemoria = new MyLinkedListImpl<>();
+        this.procesoEjecutando = null;
+        this.logManager = new LogManager();
+    }
+    
+//ACA EMPIEZA EL LOAD Y LAS FUNCIONES:
     @Override
     public void loadProcessAndUserData(String processCsvPath, String usersCsvPath) {
         try {
