@@ -74,6 +74,78 @@ public class ProcessManagerImpl implements ProcessManager{
         System.out.println("Usuarios cargados: " + cantidadUsuarios);
     }
 
+    private void cargarProcesos(String processCsvPath) throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(processCsvPath));
+
+        String linea;
+        int cantidadProcesos = 0;
+        int numeroLinea = 0;
+
+        while ((linea = br.readLine()) != null) {
+            numeroLinea++;
+            linea = linea.trim();
+            if (linea.isEmpty()) continue;
+
+            // Por si el archivo viene con BOM invisible al inicio
+            if (linea.startsWith("\uFEFF")) linea = linea.substring(1);
+
+            // Saltea encabezado del CSV: pid;uid;name;events
+            if (numeroLinea == 1 && linea.toLowerCase().startsWith("pid;")) continue;
+
+            // split(";", 4) para no partir el campo events si tuviera ';'
+            String[] partes = linea.split(";", 4);
+
+            if (partes.length != 4) {
+                br.close();
+                throw new IllegalArgumentException("Formato inválido en process.csv línea " + numeroLinea);
+            }
+
+            int pid;
+            int uid;
+
+            try {
+                pid = Integer.parseInt(partes[0].trim());
+            } catch (NumberFormatException e) {
+                br.close();
+                throw new IllegalArgumentException("PID inválido en process.csv línea " + numeroLinea);
+            }
+
+            try {
+                uid = Integer.parseInt(partes[1].trim());
+            } catch (NumberFormatException e) {
+                br.close();
+                throw new IllegalArgumentException("UID inválido en process.csv línea " + numeroLinea);
+            }
+
+            String nombre = partes[2].trim();
+            String eventosRaw = partes[3].trim();
+
+            if (procesosPorPid.contains(pid)) {
+                br.close();
+                throw new IllegalArgumentException("PID duplicado en process.csv línea " + numeroLinea + ": " + pid);
+            }
+
+            Usuario usuario = usuariosPorUid.get(uid);
+            if (usuario == null) {
+                br.close();
+                throw new IllegalArgumentException(
+                        "Usuario inexistente para proceso en process.csv línea " + numeroLinea + ". UID: " + uid);
+            }
+
+            MyList<Evento> eventos = parsearEventos(eventosRaw, numeroLinea);
+            Proceso proceso = new Proceso(pid, nombre, usuario, eventos);
+
+            procesosNew.enqueue(proceso);
+            procesosPorPid.put(pid, proceso);
+            procesosEnMemoria.add(proceso);
+
+            cantidadProcesos++;
+        }
+
+        br.close();
+        System.out.println("Procesos cargados en NEW: " + cantidadProcesos);
+    }
+
     // -------------------------------------------------------------------------
     // PREPARE
     // -------------------------------------------------------------------------
