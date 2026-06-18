@@ -146,30 +146,84 @@ public class ProcessManagerImpl implements ProcessManager{
         System.out.println("Procesos cargados en NEW: " + cantidadProcesos);
     }
 
+    private MyList<Evento> parsearEventos(String eventosRaw, int numeroLinea) {
+        if (eventosRaw == null || eventosRaw.trim().isEmpty()) {
+            throw new IllegalArgumentException("Eventos vacíos en process.csv línea " + numeroLinea);
+        }
+
+        eventosRaw = eventosRaw.trim();
+
+        if (!eventosRaw.startsWith("{") || !eventosRaw.endsWith("}")) {
+            throw new IllegalArgumentException("Formato de eventos inválido en process.csv línea " + numeroLinea);
+        }
+
+        String contenido = eventosRaw.substring(1, eventosRaw.length() - 1).trim();
+
+        if (contenido.isEmpty()) {
+            throw new IllegalArgumentException("Proceso sin eventos en process.csv línea " + numeroLinea);
+        }
+
+        MyList<Evento> eventos = new MyLinkedListImpl<>();
+        String[] eventosSeparados = contenido.split("#");
+
+        for (String eventoRaw : eventosSeparados) {
+            eventoRaw = eventoRaw.trim();
+            if (eventoRaw.isEmpty()) continue;
+
+            int posicionDosPuntos = eventoRaw.indexOf(":");
+            int posicionCorcheteInicio = eventoRaw.indexOf("[");
+            int posicionCorcheteFin = eventoRaw.lastIndexOf("]");
+
+            if (posicionDosPuntos == -1 || posicionCorcheteInicio == -1 || posicionCorcheteFin == -1
+                    || posicionCorcheteInicio < posicionDosPuntos
+                    || posicionCorcheteFin < posicionCorcheteInicio) {
+                throw new IllegalArgumentException("Evento mal formado en process.csv línea " + numeroLinea);
+            }
+
+            String tipoTexto = eventoRaw.substring(0, posicionDosPuntos).trim();
+            TipoEvento tipoEvento;
+            try {
+                tipoEvento = TipoEvento.valueOf(tipoTexto.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException(
+                        "Tipo de evento inválido en process.csv línea " + numeroLinea + ": " + tipoTexto);
+            }
+
+            String instruccionesRaw = eventoRaw
+                    .substring(posicionCorcheteInicio + 1, posicionCorcheteFin).trim();
+
+            if (instruccionesRaw.isEmpty()) {
+                throw new IllegalArgumentException("Evento sin instrucciones en process.csv línea " + numeroLinea);
+            }
+
+            MyList<String> instrucciones = new MyLinkedListImpl<>();
+            for (String instruccion : instruccionesRaw.split(",")) {
+                instruccion = instruccion.trim();
+                if (!instruccion.isEmpty()) instrucciones.add(instruccion);
+            }
+
+            if (instrucciones.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Evento sin instrucciones válidas en process.csv línea " + numeroLinea);
+            }
+
+            eventos.add(new Evento(tipoEvento, instrucciones));
+        }
+
+        if (eventos.isEmpty()) {
+            throw new IllegalArgumentException("Proceso sin eventos válidos en process.csv línea " + numeroLinea);
+        }
+
+        return eventos;
+    }
+
     // -------------------------------------------------------------------------
     // PREPARE
     // -------------------------------------------------------------------------
 
     @Override
     public void prepareProcesses() {
-        if (nuevosProcesos.isEmpty()) {
-            System.out.println("No hay procesos nuevos para preparar.");
-            return;
-        }
-        while (!nuevosProcesos.isEmpty()) {
-            Process p;
-            try {
-                p = nuevosProcesos.dequeue();
-            } catch (EmptyQueueException e) {
-                break;
-            }
-            p.calculatePriority();
-            p.setState(ProcessState.PENDING);
-            procesosPendientes.insert(p);
-            log("NEW PENDING PROCESS: PID=" + p.getPid() + " | " + p.getName()
-                    + " | USER:" + p.getUser().getAlias() + " UID:" + p.getUser().getUid()
-                    + " | P=" + p.getPriority());
-        }
+        
     }
 
     // -------------------------------------------------------------------------
