@@ -262,9 +262,30 @@ public class ProcessManagerImpl implements ProcessManager{
     // PREPARE
     // -------------------------------------------------------------------------
 
-    @Override
+ @Override
     public void prepareProcesses() {
-        
+        if (procesosNew.isEmpty()) {
+            System.out.println("No hay procesos NEW para preparar.");
+            return;
+        }
+
+        int cantidadPreparados = 0;
+
+        while (!procesosNew.isEmpty()) {
+            try {
+                Proceso proceso = procesosNew.dequeue();
+                proceso.calcularPrioridad();
+                proceso.setEstado(EstadoProceso.PENDING);
+                procesosPending.insert(proceso);
+                logManager.logNewPending(proceso);
+                cantidadPreparados++;
+            } catch (EmptyQueueException e) {
+                System.out.println("Error: la cola de procesos NEW está vacía.");
+                return;
+            }
+        }
+
+        System.out.println("Procesos preparados: " + cantidadPreparados);
     }
 
     // -------------------------------------------------------------------------
