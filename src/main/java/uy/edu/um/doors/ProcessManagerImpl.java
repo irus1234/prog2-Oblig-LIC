@@ -366,37 +366,21 @@ public class ProcessManagerImpl implements ProcessManager{
 
     private void agregarAFinalizados(Proceso proceso) {
         if (procesosFinished.size() >= MAX_FINISHED_PROCESS_ON_RAM) {
-            // Overflow: loguear cabecera
             logManager.logFinishedStackOverflow();
 
-            // Invertir la pila con auxiliar para mostrar en orden inverso al de finalización
-            // (más antiguo primero, como pide el enunciado)
-            MyStack<Proceso> aux = new MyStackImpl<>();
             while (!procesosFinished.isEmpty()) {
                 try {
-                    aux.push(procesosFinished.pop());
-                } catch (EmptyStackException e) {
-                    break;
-                }
-            }
+                    Proceso descartado = procesosFinished.pop();
 
-            // Imprimir y descartar cada proceso
-            while (!aux.isEmpty()) {
-                try {
-                    Proceso descartado = aux.pop();
-                    System.out.println("PID=" + descartado.getPid()
-                            + " " + descartado.getNombre()
-                            + " | STATE: " + descartado.getTipoFinalizacion()
-                            + " | USER:" + descartado.getUsuario().getAlias()
-                            + " UID:" + descartado.getUsuario().getUid());
-                    // Remover del índice y de la lista en memoria
+                    logManager.logProcesoFinalizadoEnOverflow(descartado);
+
                     procesosPorPid.remove(descartado.getPid());
                     procesosEnMemoria.remove(descartado);
+
                 } catch (EmptyStackException e) {
                     break;
                 }
             }
-            // La pila quedó vacía; ahora entra el nuevo proceso
         }
 
         procesosFinished.push(proceso);
@@ -507,15 +491,23 @@ public class ProcessManagerImpl implements ProcessManager{
 
     private void imprimirFinalizados(boolean verbose) {
         System.out.println("FINISHED:");
-        // Recorre procesosEnMemoria filtrando FINISHED — O(n), sin estructuras intermedias
-        Node<Proceso> nodo = procesosEnMemoria.getFirst();
-        while (nodo != null) {
-            Proceso p = nodo.getValue();
-            if (p.getEstado() == EstadoProceso.FINISHED) {
-                System.out.println("        " + lineaResumenFinalizados(p));
-                if (verbose) imprimirEventos(p);
-            }
-            nodo = nodo.getNext();
+
+        MyStackImpl<Proceso> pilaFinalizados = (MyStackImpl<Proceso>) procesosFinished;
+        imprimirFinalizadosDesdeNodo(pilaFinalizados.getFirst(), verbose);
+    }
+
+    private void imprimirFinalizadosDesdeNodo(Node<Proceso> nodo, boolean verbose) {
+        if (nodo == null) {
+            return;
+        }
+
+        imprimirFinalizadosDesdeNodo(nodo.getNext(), verbose);
+
+        Proceso p = nodo.getValue();
+        System.out.println("        " + lineaResumenFinalizados(p));
+
+        if (verbose) {
+            imprimirEventos(p);
         }
     }
 

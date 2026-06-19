@@ -25,6 +25,15 @@ public class LogManager {
                 ".txt";
     }
 
+
+    public void logProcesoFinalizadoEnOverflow(Proceso proceso) {
+        writeRaw("PID=" + proceso.getPid()
+                + " " + proceso.getNombre()
+                + " | STATE: " + proceso.getTipoFinalizacion()
+                + " | USER:" + proceso.getUsuario().getAlias()
+                + " UID:" + proceso.getUsuario().getUid());
+    }
+
     public void logNewPending(Proceso proceso) {
         write("NEW PENDING PROCESS: PID=" + proceso.getPid()
                 + " | " + proceso.getNombre()
@@ -92,6 +101,16 @@ public class LogManager {
                 + " | USER:" + proceso.getUsuario().getAlias()
                 + " UID:" + proceso.getUsuario().getUid()
                 + " | STATE:" + proceso.getTipoFinalizacion());
+    }
+
+    private void writeRaw(String message) {
+        System.out.println(message);
+
+        try (PrintWriter writer = new PrintWriter(new FileWriter(fileName, true))) {
+            writer.println(message);
+        } catch (IOException e) {
+            System.out.println("ERROR escribiendo log: " + e.getMessage());
+        }
     }
 
     private void write(String message) {
