@@ -1,6 +1,6 @@
 package uy.edu.um.doors;
 //Imports
-import uy.edu.um.clases.*;
+
 import uy.edu.um.tad.hash.MyHash;
 import uy.edu.um.tad.hash.MyHashImpl;
 import uy.edu.um.tad.heap.EmptyHeapException;
