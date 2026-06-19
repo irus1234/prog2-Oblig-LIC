@@ -96,7 +96,8 @@ public class ProcessManagerImpl implements ProcessManager{
 
             TipoUsuario tipo;
             try {
-                tipo = TipoUsuario.valueOf(tipoTexto);
+
+                tipo = TipoUsuario.valueOf(tipoTexto.trim().toUpperCase());
             } catch (IllegalArgumentException e) {
                 br.close();
                 throw new IllegalArgumentException("Tipo de usuario inválido en users.csv línea " + numeroLinea);
@@ -409,6 +410,7 @@ public class ProcessManagerImpl implements ProcessManager{
     @Override
     public void printStatusByUser(int uid) {
         Usuario user = usuariosPorUid.get(uid);
+
         if (user == null) {
             System.out.println("No existe usuario con UID=" + uid);
             return;
@@ -416,33 +418,42 @@ public class ProcessManagerImpl implements ProcessManager{
 
         System.out.println("PROCESS STATUS - USER:" + user.getAlias() + " UID:" + uid);
 
+        // Nuevos
+        System.out.println("NEW:");
+        Node<Proceso> nodo = procesosEnMemoria.getFirst();
+        while (nodo != null) {
+            Proceso p = nodo.getValue();
+
+            if (p.getUsuario().getUid() == uid && p.getEstado() == EstadoProceso.NEW) {
+                System.out.println("        " + lineaResumenProcesoConEstado(p));
+            }
+
+            nodo = nodo.getNext();
+        }
+
         // Ejecutando
         System.out.println("EXECUTING:");
         if (procesoEjecutando != null && procesoEjecutando.getUsuario().getUid() == uid) {
             System.out.println("        " + lineaResumenProceso(procesoEjecutando));
         }
 
-        // Pendientes — recorre procesosEnMemoria filtrando por usuario y estado PENDING
+        // Pendientes
         System.out.println("PENDING:");
-        Node<Proceso> nodo = procesosEnMemoria.getFirst();
-        while (nodo != null) {
-            Proceso p = nodo.getValue();
-            if (p.getUsuario().getUid() == uid && p.getEstado() == EstadoProceso.PENDING) {
-                System.out.println("        " + lineaResumenProceso(p));
-            }
-            nodo = nodo.getNext();
-        }
-
-        // Finalizados — recorre procesosEnMemoria filtrando por usuario y estado FINISHED
-        System.out.println("FINISHED:");
         nodo = procesosEnMemoria.getFirst();
         while (nodo != null) {
             Proceso p = nodo.getValue();
-            if (p.getUsuario().getUid() == uid && p.getEstado() == EstadoProceso.FINISHED) {
-                System.out.println("        " + lineaResumenFinalizados(p));
+
+            if (p.getUsuario().getUid() == uid && p.getEstado() == EstadoProceso.PENDING) {
+                System.out.println("        " + lineaResumenProceso(p));
             }
+
             nodo = nodo.getNext();
         }
+
+        // Finalizados
+        System.out.println("FINISHED:");
+        MyStackImpl<Proceso> pilaFinalizados = (MyStackImpl<Proceso>) procesosFinished;
+        imprimirFinalizadosDesdeNodoPorUsuario(pilaFinalizados.getFirst(), false, uid);
     }
 
     @Override
@@ -549,5 +560,37 @@ public class ProcessManagerImpl implements ProcessManager{
                     + " UID:" + p.getUsuarioTerminador().getUid();
         }
         return base;
+    }
+
+    private String lineaResumenProcesoConEstado(Proceso p) {
+        String resumen = "PID=" + p.getPid()
+                + " | " + p.getNombre()
+                + " | USER:" + p.getUsuario().getAlias()
+                + " UID:" + p.getUsuario().getUid()
+                + " | STATE:" + p.getEstado();
+
+        if (p.getEstado() != EstadoProceso.NEW) {
+            resumen += " | P=" + p.getPrioridad();
+        }
+
+        return resumen;
+    }
+
+    private void imprimirFinalizadosDesdeNodoPorUsuario(Node<Proceso> nodo, boolean verbose, int uid) {
+        if (nodo == null) {
+            return;
+        }
+
+        imprimirFinalizadosDesdeNodoPorUsuario(nodo.getNext(), verbose, uid);
+
+        Proceso p = nodo.getValue();
+
+        if (p.getUsuario().getUid() == uid) {
+            System.out.println("        " + lineaResumenFinalizados(p));
+
+            if (verbose) {
+                imprimirEventos(p);
+            }
+        }
     }
 }

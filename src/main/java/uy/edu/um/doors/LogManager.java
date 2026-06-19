@@ -21,8 +21,7 @@ public class LogManager {
 
     public LogManager() {
         this.fileName = "DOORS_PROCESS_LOG_" +
-                LocalDate.now().format(FILE_DATE_FORMAT) +
-                ".txt";
+                LocalDate.now().format(FILE_DATE_FORMAT);
     }
 
 
@@ -71,7 +70,7 @@ public class LogManager {
 
             instrucciones.append("]");
 
-            write(instrucciones.toString());
+            writeRaw(instrucciones.toString());
 
             nodoEvento = nodoEvento.getNext();
         }

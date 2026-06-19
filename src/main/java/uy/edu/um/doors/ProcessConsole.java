@@ -124,19 +124,32 @@ public class ProcessConsole {
             System.out.println("Uso: pfinish OK | ERROR | TERM [UID]");
             return;
         }
+
         String finishType = parts[1].toUpperCase();
+
         switch (finishType) {
             case "OK":
+                if (parts.length != 2) {
+                    System.out.println("Uso: pfinish OK");
+                    return;
+                }
                 processManager.finishProcessOk();
                 break;
+
             case "ERROR":
+                if (parts.length != 2) {
+                    System.out.println("Uso: pfinish ERROR");
+                    return;
+                }
                 processManager.finishProcessError();
                 break;
+
             case "TERM":
-                if (parts.length < 3) {
+                if (parts.length != 3) {
                     System.out.println("Uso: pfinish TERM [UID]");
                     return;
                 }
+
                 try {
                     int uid = Integer.parseInt(parts[2]);
                     processManager.terminateProcess(uid);
@@ -144,6 +157,7 @@ public class ProcessConsole {
                     System.out.println("UID no es un número de ID válido");
                 }
                 break;
+
             default:
                 System.out.println("Tipo de finalización inválido: " + finishType);
                 System.out.println("Uso: pfinish OK | ERROR | TERM [UID]");
@@ -151,21 +165,32 @@ public class ProcessConsole {
         }
     }
 
+
+
+
     private void handleStatusCommand(String[] parts) {
         if (parts.length == 1) {
             processManager.printStatus();
             return;
         }
+
         String option = parts[1].toLowerCase();
+
         switch (option) {
             case "-verbose":
+                if (parts.length != 2) {
+                    System.out.println("Uso: pstatus -verbose");
+                    return;
+                }
                 processManager.printStatusVerbose();
                 break;
+
             case "-u":
-                if (parts.length < 3) {
+                if (parts.length != 3) {
                     System.out.println("Uso: pstatus -u [UID]");
                     return;
                 }
+
                 try {
                     int uid = Integer.parseInt(parts[2]);
                     processManager.printStatusByUser(uid);
@@ -173,11 +198,13 @@ public class ProcessConsole {
                     System.out.println("UID no es un número de ID válido");
                 }
                 break;
+
             case "-p":
-                if (parts.length < 3) {
+                if (parts.length != 3) {
                     System.out.println("Uso: pstatus -p [PID]");
                     return;
                 }
+
                 try {
                     int pid = Integer.parseInt(parts[2]);
                     processManager.printStatusByProcess(pid);
@@ -185,6 +212,7 @@ public class ProcessConsole {
                     System.out.println("PID no es un número de ID válido");
                 }
                 break;
+
             default:
                 System.out.println("Opción inválida para pstatus: " + option);
                 System.out.println("Uso: pstatus | pstatus -verbose | pstatus -u [UID] | pstatus -p [PID]");
