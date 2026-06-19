@@ -464,13 +464,25 @@ public class ProcessManagerImpl implements ProcessManager{
             return;
         }
 
-        System.out.println("PROCESS DETAIL");
-        System.out.println("PID=" + p.getPid()
+        String detalle = "PID=" + p.getPid()
                 + " | " + p.getNombre()
                 + " | USER:" + p.getUsuario().getAlias()
                 + " UID:" + p.getUsuario().getUid()
                 + " | P=" + p.getPrioridad()
-                + " | STATE:" + p.getEstado());
+                + " | STATE:" + p.getEstado();
+
+        if (p.getEstado() == EstadoProceso.FINISHED && p.getTipoFinalizacion() != null) {
+            detalle += " | FINALIZATION:" + p.getTipoFinalizacion();
+
+            if (p.getTipoFinalizacion() == TipoFinalizacion.TERMINATED
+                    && p.getUsuarioTerminador() != null) {
+                detalle += " by USER:" + p.getUsuarioTerminador().getAlias()
+                        + " UID:" + p.getUsuarioTerminador().getUid();
+            }
+        }
+
+        System.out.println("PROCESS DETAIL");
+        System.out.println(detalle);
         imprimirEventos(p);
     }
 
@@ -488,17 +500,68 @@ public class ProcessManagerImpl implements ProcessManager{
 
     private void imprimirPendientes(boolean verbose) {
         System.out.println("PENDING:");
-        // Recorre procesosEnMemoria filtrando PENDING — O(n), sin estructuras intermedias
-        Node<Proceso> nodo = procesosEnMemoria.getFirst();
-        while (nodo != null) {
-            Proceso p = nodo.getValue();
-            if (p.getEstado() == EstadoProceso.PENDING) {
-                System.out.println("        " + lineaResumenProceso(p));
-                if (verbose) imprimirEventos(p);
+
+        boolean hayUltimoImpreso = false;
+        int ultimaPrioridad = 0;
+        int ultimoPid = 0;
+
+        while (true) {
+            Proceso mejor = null;
+
+            Node<Proceso> nodo = procesosEnMemoria.getFirst();
+
+            while (nodo != null) {
+                Proceso p = nodo.getValue();
+
+                if (p.getEstado() == EstadoProceso.PENDING
+                        && vieneDespuesDelUltimoPendiente(p, hayUltimoImpreso, ultimaPrioridad, ultimoPid)) {
+
+                    if (esMejorPendienteParaMostrar(p, mejor)) {
+                        mejor = p;
+                    }
+                }
+
+                nodo = nodo.getNext();
             }
-            nodo = nodo.getNext();
+
+            if (mejor == null) {
+                break;
+            }
+
+            System.out.println("        " + lineaResumenProceso(mejor));
+
+            if (verbose) {
+                imprimirEventos(mejor);
+            }
+
+            hayUltimoImpreso = true;
+            ultimaPrioridad = mejor.getPrioridad();
+            ultimoPid = mejor.getPid();
         }
     }
+
+    private boolean vieneDespuesDelUltimoPendiente(Proceso p, boolean hayUltimoImpreso,
+                                                   int ultimaPrioridad, int ultimoPid) {
+        if (!hayUltimoImpreso) {
+            return true;
+        }
+
+        return p.getPrioridad() < ultimaPrioridad
+                || (p.getPrioridad() == ultimaPrioridad && p.getPid() > ultimoPid);
+    }
+
+    private boolean esMejorPendienteParaMostrar(Proceso candidato, Proceso mejorActual) {
+        if (mejorActual == null) {
+            return true;
+        }
+
+        if (candidato.getPrioridad() != mejorActual.getPrioridad()) {
+            return candidato.getPrioridad() > mejorActual.getPrioridad();
+        }
+
+        return candidato.getPid() < mejorActual.getPid();
+    }
+
 
     private void imprimirFinalizados(boolean verbose) {
         System.out.println("FINISHED:");

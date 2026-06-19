@@ -1,0 +1,3 @@
+101;1;low.exe;{CPU:[a]}
+102;2;admin_two.exe;{DISK:[a]#RAM:[b]}
+103;1;generic_three.exe;{CPU:[a]#CPU:[b]#RAM:[c]}
